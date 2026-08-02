@@ -45,7 +45,7 @@ change the postStartCommand to either `wpc start --plugin` or `wpc start --theme
 
 
 ### Add to .gitignore
-Add the `.docker-data` directory to your .gitignore file.
+Add the `.docker-data` and `.wpc` directories to your .gitignore file.
 
 ## Usage
 ```bash
