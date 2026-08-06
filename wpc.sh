@@ -2,7 +2,7 @@
 set -e
 
 # ── Script Metadata ────────────────────────────────────────────────────────────
-CURRENT_VERSION="0.0.7"
+CURRENT_VERSION="0.0.8"
 AUTHOR="pjd199"
 SOURCE_URI="https://github.com/pjd199/wordpress-codespace"
 LICENSE="MIT"
@@ -137,6 +137,9 @@ case $1 in
             }
 
             define('FORCE_SSL_ADMIN', true);
+            define('WP_DEBUG', true);
+            define('WP_DEBUG_LOG', true);
+            define('WP_DEBUG_DISPLAY', false);
         " \
         -d $WPC_WP_IMAGE
 
@@ -170,9 +173,14 @@ case $1 in
         --skip-email \
         --allow-root)
 
-        # ── Fix file permissions ───────────────────────────────────────────────────
-        echo "Fixing file permissions..."
+        # ── Fix file permissions & setup debug log ─────────────────────────────────
+        echo "Fixing file permissions and initializing debug.log..."
         sudo chmod -R 777 $WPC_DIR
+        
+        # Create wp-content directory if it doesn't exist yet and touch debug.log
+        mkdir -p "$WPC_DIR/wordpress/wp-content"
+        touch "$WPC_DIR/wordpress/wp-content/debug.log"
+        sudo chmod 666 "$WPC_DIR/wordpress/wp-content/debug.log"
 
         # ── Done ────────────────────────────────────────────────────────────────
         echo ""
