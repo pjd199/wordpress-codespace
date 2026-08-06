@@ -126,20 +126,7 @@ case $1 in
         -e WORDPRESS_CONFIG_EXTRA="
             \$_SERVER['HTTP_HOST'] = \$_SERVER['HTTP_X_FORWARDED_HOST'] ?? \$_SERVER['HTTP_HOST'];
             \$_SERVER['HTTPS'] = 'on';
-
-            \$codespace_name   = getenv('CODESPACE_NAME');
-            \$codespace_domain = getenv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN');
-
-            if (\$codespace_name && \$codespace_domain) {
-                \$site_url = 'https://' . \$codespace_name . '-80.' . \$codespace_domain;
-                define('WP_HOME',    \$site_url);
-                define('WP_SITEURL', \$site_url);
-            }
-
             define('FORCE_SSL_ADMIN', true);
-            define('WP_DEBUG', true);
-            define('WP_DEBUG_LOG', true);
-            define('WP_DEBUG_DISPLAY', false);        
         " \
         -d $WPC_WP_IMAGE
 
@@ -154,19 +141,27 @@ case $1 in
             docker exec wordpress mv wp-cli.phar /usr/local/bin/wp
         fi
 
-        # ── Configure wp-config.php ───────────────────────────────────────────
+        # ── Fix URLs ───────────────────────────────────────────────────────────
+        echo "Updating site URL to $SITE_URL"
         SITE_URL="https://${CODESPACE_NAME}-80.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"
-        echo "Configuring wp-config.php constants..."
-        
-        # Using --force replaces existing definitions instead of appending duplicate lines
-        docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root --force 2>/dev/null || true
-        docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root --force 2>/dev/null || true
-
-        # ── Fix Database URLs ──────────────────────────────────────────────────
-        echo "Updating site URLs..."
         docker exec wordpress wp option update siteurl "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
+        docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root 2>/dev/null || true
+        docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root 2>/dev/null || true
+
+        # ── Advanced Config: Clean & Set Debug Constants ───────────────────────
+        echo "Enabling debug in wp-config.php"
+
+        # Delete any existing definitions to prevent duplicate constant warnings
+        docker exec wordpress wp config delete WP_DEBUG --allow-root 2>/dev/null || true
+        docker exec wordpress wp config delete WP_DEBUG_LOG --allow-root 2>/dev/null || true
+        docker exec wordpress wp config delete WP_DEBUG_DISPLAY --allow-root 2>/dev/null || true
         
+        # Inject fresh definitions cleanly
+        docker exec wordpress wp config set WP_DEBUG true --raw --allow-root
+        docker exec wordpress wp config set WP_DEBUG_LOG true --raw --allow-root
+        docker exec wordpress wp config set WP_DEBUG_DISPLAY false --raw --allow-root
+
         # ── Install WordPress (if needed) ─────────────────────
         docker exec wordpress wp core is-installed --allow-root 2>/dev/null || \
         (echo "Installing WordPress" && docker exec wordpress wp core install \
