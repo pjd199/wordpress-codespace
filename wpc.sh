@@ -126,7 +126,20 @@ case $1 in
         -e WORDPRESS_CONFIG_EXTRA="
             \$_SERVER['HTTP_HOST'] = \$_SERVER['HTTP_X_FORWARDED_HOST'] ?? \$_SERVER['HTTP_HOST'];
             \$_SERVER['HTTPS'] = 'on';
+
+            \$codespace_name   = getenv('CODESPACE_NAME');
+            \$codespace_domain = getenv('GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN');
+
+            if (\$codespace_name && \$codespace_domain) {
+                \$site_url = 'https://' . \$codespace_name . '-80.' . \$codespace_domain;
+                define('WP_HOME',    \$site_url);
+                define('WP_SITEURL', \$site_url);
+            }
+
             define('FORCE_SSL_ADMIN', true);
+            define('WP_DEBUG', true);
+            define('WP_DEBUG_LOG', true);
+            define('WP_DEBUG_DISPLAY', false);        
         " \
         -d $WPC_WP_IMAGE
 
@@ -148,9 +161,6 @@ case $1 in
         # Using --force replaces existing definitions instead of appending duplicate lines
         docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root --force 2>/dev/null || true
         docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root --force 2>/dev/null || true
-        docker exec wordpress wp config set WP_DEBUG true --raw --allow-root --force 2>/dev/null || true
-        docker exec wordpress wp config set WP_DEBUG_LOG true --raw --allow-root --force 2>/dev/null || true
-        docker exec wordpress wp config set WP_DEBUG_DISPLAY false --raw --allow-root --force 2>/dev/null || true
 
         # ── Fix Database URLs ──────────────────────────────────────────────────
         echo "Updating site URLs..."
