@@ -137,9 +137,6 @@ case $1 in
             }
 
             define('FORCE_SSL_ADMIN', true);
-            define('WP_DEBUG', true);
-            define('WP_DEBUG_LOG', true);
-            define('WP_DEBUG_DISPLAY', false);
         " \
         -d $WPC_WP_IMAGE
 
@@ -161,6 +158,11 @@ case $1 in
         docker exec wordpress wp option update home "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_HOME "$SITE_URL" --allow-root 2>/dev/null || true
         docker exec wordpress wp config set WP_SITEURL "$SITE_URL" --allow-root 2>/dev/null || true
+        
+        echo "Configuring WordPress debug constants..."
+        docker exec wordpress wp config set WP_DEBUG true --raw --allow-root 2>/dev/null || true
+        docker exec wordpress wp config set WP_DEBUG_LOG true --raw --allow-root 2>/dev/null || true
+        docker exec wordpress wp config set WP_DEBUG_DISPLAY false --raw --allow-root 2>/dev/null || true
 
         # ── Install WordPress (if needed) ─────────────────────
         docker exec wordpress wp core is-installed --allow-root 2>/dev/null || \
